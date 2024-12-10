@@ -30,6 +30,7 @@
     "@radix-ui/react-toast": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.1.2",
     "@tanstack/react-query": "^5.56.2",
+    "@xata.io/client": "^0.0.0-next.va121e4207b94bfe0a3c025fc00b247b923880930",
     "argon2": "0.31.2",
     "autoprefixer": "^10.4.20",
     "axios": "^1.7.7",

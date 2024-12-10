@@ -2,9 +2,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,12 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Form,
   FormControl,
@@ -48,6 +40,7 @@ import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Customer, VisaApplication } from "@prisma/client";
+import { CustomCalendar } from "@/app/components/custom-calender";
 
 interface VisaApplicationFormProps {
   initialData?: VisaApplication & { customer: Customer };
@@ -60,37 +53,43 @@ export default function VisaApplicationForm({
   const [isEditing] = useState(!!initialData);
   const queryClient = useQueryClient();
 
-  let defaultValue;
-  if (initialData) {
-    defaultValue = {
-      ...initialData,
-      firstName: initialData?.customer?.firstName,
-      middleName: initialData?.customer?.middleName,
-      lastName: initialData?.customer?.lastName,
-      email: initialData?.customer?.email,
-      address: initialData?.customer?.address,
-      passportNumber: initialData?.customer?.passportNumber,
-    };
-  }
-
-  console.log("Initial Data", initialData);
-
   const form = useForm<VisaApplicationInput>({
     resolver: zodResolver(VisaApplicationInputSchema),
-    defaultValues: defaultValue || {
-      firstName: "",
-      middleName: "",
-      lastName: "",
-      email: "",
-      address: "",
-      passportNumber: "",
-      visaAppliedDate: new Date(),
-      visaStatus: "PENDING",
-      visaType: undefined,
-      totalAmount: 0,
-      totalPaid: 0,
-      overseer: "",
-    },
+    defaultValues: initialData
+      ? {
+          firstName: initialData.customer.firstName,
+          middleName: initialData.customer.middleName,
+          lastName: initialData.customer.lastName,
+          email: initialData.customer.email,
+          address: initialData.customer.address,
+          phone: initialData.customer.phone,
+          currentVisa: initialData.customer.currentVisa,
+          visaExpiry: initialData.customer.visaExpiry
+            ? new Date(initialData.customer.visaExpiry)
+            : null,
+          passportNumber: initialData.customer.passportNumber,
+          visaAppliedDate: new Date(initialData.visaAppliedDate),
+          visaStatus: initialData.visaStatus,
+          visaType: initialData.visaType,
+          totalAmount: initialData.totalAmount,
+          totalPaid: initialData.totalPaid,
+        }
+      : {
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          email: "",
+          address: "",
+          passportNumber: "",
+          visaAppliedDate: new Date(),
+          visaStatus: "PENDING",
+          visaType: undefined,
+          totalAmount: 0,
+          totalPaid: 0,
+          currentVisa: undefined,
+          visaExpiry: new Date(),
+          phone: "",
+        },
   });
 
   const createMutation = useMutation({
@@ -153,8 +152,6 @@ export default function VisaApplicationForm({
   });
 
   const handleFormSubmit = (data: VisaApplicationInput) => {
-    console.log("Form Submitted", data);
-    form.reset();
     if (isEditing && initialData?.id) {
       updateMutation.mutate({ id: initialData.id, data });
     } else {
@@ -182,7 +179,7 @@ export default function VisaApplicationForm({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleFormSubmit)}>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="firstName"
@@ -209,12 +206,28 @@ export default function VisaApplicationForm({
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -272,41 +285,32 @@ export default function VisaApplicationForm({
               />
               <FormField
                 control={form.control}
-                name="visaAppliedDate"
+                name="visaType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Visa Applied Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormLabel>Current Visa</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select current Visa" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="SUB_500">500</SelectItem>
+                        <SelectItem value="SUB_482">482</SelectItem>
+                        <SelectItem value="SUB_485">485</SelectItem>
+                        <SelectItem value="SUB_407">407</SelectItem>
+                        <SelectItem value="SUB_186">186</SelectItem>
+                        <SelectItem value="SUB_189">189</SelectItem>
+                        <SelectItem value="SUB_190">190</SelectItem>
+                        <SelectItem value="SUB_600">600</SelectItem>
+                        <SelectItem value="SUB_820">820</SelectItem>
+                        <SelectItem value="SUB_801">801</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -356,6 +360,7 @@ export default function VisaApplicationForm({
                       <SelectContent>
                         <SelectItem value="SUB_500">500</SelectItem>
                         <SelectItem value="SUB_482">482</SelectItem>
+                        <SelectItem value="SUB_485">485</SelectItem>
                         <SelectItem value="SUB_407">407</SelectItem>
                         <SelectItem value="SUB_186">186</SelectItem>
                         <SelectItem value="SUB_189">189</SelectItem>
@@ -374,43 +379,31 @@ export default function VisaApplicationForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="visaType"
+                name="visaAppliedDate"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Visa</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select current Visa" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="SUB_500">500</SelectItem>
-                        <SelectItem value="SUB_482">482</SelectItem>
-                        <SelectItem value="SUB_407">407</SelectItem>
-                        <SelectItem value="SUB_186">186</SelectItem>
-                        <SelectItem value="SUB_189">189</SelectItem>
-                        <SelectItem value="SUB_190">190</SelectItem>
-                        <SelectItem value="SUB_600">600</SelectItem>
-                        <SelectItem value="SUB_820">820</SelectItem>
-                        <SelectItem value="SUB_801">801</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <FormItem className="flex flex-col self-end">
+                    <FormLabel>Visa Applied Date</FormLabel>
+                    <FormControl>
+                      <CustomCalendar
+                        date={field.value ?? new Date()}
+                        setDate={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="overseer"
+                name="visaExpiry"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Record Created By</FormLabel>
+                  <FormItem className="flex flex-col self-end">
+                    <FormLabel>New Visa Expiry Date</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <CustomCalendar
+                        date={field.value ?? new Date()}
+                        setDate={field.onChange}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

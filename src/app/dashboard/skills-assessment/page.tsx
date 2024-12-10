@@ -309,7 +309,6 @@ export default function SkillsAssesment() {
               <TableHead>RPL</TableHead>
               <TableHead>Outcome Result</TableHead>
               <TableHead>Outcome Date</TableHead>
-              <TableHead>Remarks</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -335,7 +334,6 @@ export default function SkillsAssesment() {
                 <TableCell>{item.rpl}</TableCell>
                 <TableCell>{item.outcomeResult}</TableCell>
                 <TableCell>{item.outcomeDate?.toDateString()}</TableCell>
-                <TableCell>{item.remarks}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

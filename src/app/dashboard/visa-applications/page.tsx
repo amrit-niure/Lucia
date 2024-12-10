@@ -53,21 +53,6 @@ import { useQuery } from "@tanstack/react-query";
 import { getAllVisaApplication } from "@/features/actions/visa-applications/actions";
 import LoadingSpinner from "@/app/components/loading-spinner";
 
-interface Visa {
-  id: number;
-  name: string;
-  email: string;
-  address: string;
-  passportNumber: string;
-  visaAppliedDate: string; // ISO 8601 date format
-  visaStatus: string;
-  previousVisa: string;
-  visaType: string;
-  totalAmount: number;
-  totalPaid: number;
-  overseer: string;
-}
-
 export default function Component() {
   const [sortBy, setSortBy] = useState("visaAppliedDate");
   const [sortOrder, setSortOrder] = useState("asc");
@@ -120,10 +105,8 @@ export default function Component() {
     }
   };
   const sortedApplications = [...filteredData].sort((a, b) => {
-    if (a[sortBy as keyof Visa] < b[sortBy as keyof Visa])
-      return sortOrder === "asc" ? -1 : 1;
-    if (a[sortBy as keyof Visa] > b[sortBy as keyof Visa])
-      return sortOrder === "asc" ? 1 : -1;
+    if (a[sortBy] < b[sortBy]) return sortOrder === "asc" ? -1 : 1;
+    if (a[sortBy] > b[sortBy]) return sortOrder === "asc" ? 1 : -1;
     return 0;
   });
   // Pagination
@@ -317,15 +300,13 @@ export default function Component() {
               <TableHead className="px-4 py-4">S.N</TableHead>
               <TableHead className="px-4 py-4">Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Address</TableHead>
               <TableHead>Passport Number</TableHead>
               <TableHead>Visa Applied Date</TableHead>
               <TableHead>Visa Status</TableHead>
               <TableHead>Previous Visa</TableHead>
-              <TableHead>Visa Type</TableHead>
+              <TableHead>Applied Visa </TableHead>
               <TableHead>Total Amount</TableHead>
               <TableHead>Total Paid</TableHead>
-              <TableHead>Overseer</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -340,7 +321,6 @@ export default function Component() {
                   {item.customer.lastName}
                 </TableCell>
                 <TableCell>{item.customer.email}</TableCell>
-                <TableCell>{item.customer.address}</TableCell>
                 <TableCell>{item.customer.passportNumber}</TableCell>
                 <TableCell>{item.visaAppliedDate?.toDateString()}</TableCell>
                 <TableCell>{item.visaStatus}</TableCell>
@@ -348,7 +328,6 @@ export default function Component() {
                 <TableCell>{item.visaType}</TableCell>
                 <TableCell>${item.totalAmount}</TableCell>
                 <TableCell>${item.totalPaid}</TableCell>
-                <TableCell>{item.overseer}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

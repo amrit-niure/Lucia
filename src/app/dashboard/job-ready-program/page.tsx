@@ -39,6 +39,7 @@ import {
   MoreHorizontal,
   RefreshCwIcon,
   SearchIcon,
+  Trash,
   User,
 } from "lucide-react";
 import {
@@ -50,11 +51,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { getAllJrpApplication } from "@/features/actions/job-ready-program/actions";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  deleteJrpApplication,
+  getAllJrpApplication,
+} from "@/features/actions/job-ready-program/actions";
 import LoadingSpinner from "@/app/components/loading-spinner";
+import { toast } from "@/hooks/use-toast";
 
 export default function JobReadyProgram() {
+  const queryClient = useQueryClient();
   const [sort, setSort] = useState({ by: "startDate", order: "asc" });
   const [filters, setFilters] = useState({
     stage: "all",
@@ -83,9 +89,39 @@ export default function JobReadyProgram() {
       [filterKey]: value,
     }));
   };
+  //handle delete
+  const mutation = useMutation({
+    mutationFn: deleteJrpApplication,
+    onSuccess: ({ success, error }) => {
+      queryClient.invalidateQueries({ queryKey: ["jrpApplications"] });
+      if (success) {
+        toast({
+          title: "Success",
+          description: "JRP application successfully deleted.",
+        });
+      } else if (!success) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error || "Failed to create delete application",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Unknown error occoured",
+      });
+    },
+  });
+
+  // Handle delete
+  const handleDelete = (id: string) => {
+    mutation.mutate(id);
+  };
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["visa-applications"],
+    queryKey: ["jrpApplications"],
     queryFn: () => getAllJrpApplication(),
   });
 
@@ -145,21 +181,21 @@ export default function JobReadyProgram() {
           </Button>
         </div>
         <CardDescription>
-          Manage and track JobReadyProgram applications
+          Manage and track JobReady Program applications
         </CardDescription>
       </CardHeader>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card>
           <CardHeader className="flex w-full flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Today&apos;s Appointments
+              Today&apos;s Applications
             </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{0}</div>
             <p className="text-xs text-muted-foreground">
-              {appliedToday === 1 ? "appointment" : "appointments "}
+              {appliedToday === 1 ? "application" : "applications"}
               scheduled for today
             </p>
           </CardContent>
@@ -167,14 +203,14 @@ export default function JobReadyProgram() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              This Week&apos;s Appointments
+              This Week&apos;s Applications
             </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{0}</div>
             <p className="text-xs text-muted-foreground">
-              {appliedThisWeek === 1 ? "appointment" : "appointments"} scheduled
+              {appliedThisWeek === 1 ? "application" : "applications"} {""}
               this week
             </p>
           </CardContent>
@@ -189,8 +225,8 @@ export default function JobReadyProgram() {
           <CardContent>
             <div className="text-2xl font-bold">{0}</div>
             <p className="text-xs text-muted-foreground">
-              {appliedThisMonth === 1 ? "appointment" : "appointments"}{" "}
-              scheduled this month
+              {appliedThisMonth === 1 ? "application" : "applications"} {""}
+              this month
             </p>
           </CardContent>
         </Card>
@@ -228,7 +264,7 @@ export default function JobReadyProgram() {
                 <SelectItem value="JRE"> JRE</SelectItem>
                 <SelectItem value="JRWA">JRWA</SelectItem>
                 <SelectItem value="JRFA">JRFA</SelectItem>
-                <SelectItem value="JRPRE">JRPRE</SelectItem>
+                <SelectItem value="PSA">PSA</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -304,7 +340,6 @@ export default function JobReadyProgram() {
               <TableHead className="px-4 py-4">S.N</TableHead>
               <TableHead className="px-4 py-4">Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Program Type</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
               <TableHead>Stage</TableHead>
@@ -314,6 +349,8 @@ export default function JobReadyProgram() {
               <TableHead>Supervisor</TableHead>
               <TableHead>Supervisor Contact</TableHead>
               <TableHead>Completion Date</TableHead>
+              <TableHead>User Id</TableHead>
+              <TableHead>Credentials</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -328,7 +365,6 @@ export default function JobReadyProgram() {
                   {item.customer.lastName}
                 </TableCell>
                 <TableCell>{item.customer.email}</TableCell>
-                <TableCell>{item.programType}</TableCell>
                 <TableCell>{item.startDate?.toDateString()}</TableCell>
                 <TableCell>{item.completionDate?.toDateString()}</TableCell>
                 <TableCell>{item.stage}</TableCell>
@@ -338,6 +374,8 @@ export default function JobReadyProgram() {
                 <TableCell>{item.supervisorName}</TableCell>
                 <TableCell>{item.supervisorContact}</TableCell>
                 <TableCell>{item.completionDate?.toDateString()}</TableCell>
+                <TableCell>{item.jrpUserId}</TableCell>
+                <TableCell>{item.jrpPassword}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -355,6 +393,10 @@ export default function JobReadyProgram() {
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDelete(item.id)}>
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

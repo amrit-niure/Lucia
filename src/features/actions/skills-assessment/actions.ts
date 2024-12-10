@@ -1,7 +1,6 @@
 "use server";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { getCustomerByEmail } from "../customers/actions";
 import { Customer, SkillsAssessment } from "@prisma/client";
 import { SkillsAssessmentInput } from "@/types/schema";
 import { checkAuth } from "@/lib/checkAuth";
@@ -9,25 +8,37 @@ import { checkAuth } from "@/lib/checkAuth";
 export async function createSkillsAssessment(data: SkillsAssessmentInput) {
   try {
     await checkAuth();
-    const customer = await getCustomerByEmail(data.email);
-
-    if (!customer || !customer.data) {
-      return {
-        success: false,
-        error: `Customer with email ${data.email} not found`,
-      };
-    }
-    /* eslint-disable @typescript-eslint/no-unused-vars */
-    const { firstName, middleName, lastName, email, ...applicationData } = data;
-    // Create the visa application and connect it to the existing customer
+    const {
+      firstName,
+      middleName,
+      lastName,
+      email,
+      address,
+      phone,
+      passportNumber,
+      visaExpiry,
+      currentVisa,
+      ...skillsAssessmentData
+    } = data;
+    // create customer record
+    const customer = await prisma.customer.create({
+      data: {
+        firstName,
+        middleName,
+        lastName,
+        email,
+        address,
+        phone,
+        passportNumber,
+        visaExpiry,
+        currentVisa,
+      },
+    });
+    // create application record
     const application = await prisma.skillsAssessment.create({
       data: {
-        ...applicationData,
-        customer: {
-          connect: {
-            id: customer.data.id,
-          },
-        },
+        ...skillsAssessmentData,
+        customerId: customer.id,
       },
     });
     revalidatePath("/skills-assessment");
@@ -52,16 +63,34 @@ export async function updateSkillsAssessment(
     middleName,
     lastName,
     email,
-    customer,
-    ...applicationData
+    address,
+    phone,
+    passportNumber,
+    visaExpiry,
+    currentVisa,
+    ...skillsAssessmentData
   } = data;
-  /* eslint-enable @typescript-eslint/no-unused-vars */
   try {
     const updatedApplication = await prisma.skillsAssessment.update({
       where: { id },
-      data: applicationData,
+      data: {
+        ...skillsAssessmentData,
+        customer: {
+          update: {
+            firstName,
+            middleName,
+            lastName,
+            email,
+            address,
+            phone,
+            passportNumber,
+            visaExpiry,
+            currentVisa,
+          },
+        },
+      },
     });
-    revalidatePath("/job-ready-program");
+    revalidatePath("/skills-assessment");
 
     return { success: true, data: updatedApplication };
   } catch (error) {
@@ -104,5 +133,22 @@ export async function getAllSkillsAssessment(): Promise<
   } catch (error) {
     console.error("Error fetching skills assessment applications:", error);
     throw new Error("Failed to fetch skills assessment applications");
+  }
+}
+
+export async function deleteSkillsAssessment(id: string) {
+  await checkAuth();
+  try {
+    await prisma.skillsAssessment.delete({
+      where: { id },
+    });
+    revalidatePath("/skills-assessment");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting skills assessment application:", error);
+    return {
+      success: false,
+      error: "Failed to delete skills assessment application",
+    };
   }
 }

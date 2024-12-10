@@ -2,9 +2,7 @@
 import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,12 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Form,
   FormControl,
@@ -45,6 +37,7 @@ import Link from "next/link";
 import { Customer } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { CustomCalendar } from "@/app/components/custom-calender";
 interface CustomerFormProps {
   initialData?: Customer;
 }
@@ -295,13 +288,12 @@ export default function CustomerForm({ initialData }: CustomerFormProps) {
                       <SelectContent>
                         <SelectItem value="SUB_500">500</SelectItem>
                         <SelectItem value="SUB_482">482</SelectItem>
+                        <SelectItem value="SUB_485">485</SelectItem>
                         <SelectItem value="SUB_407">407</SelectItem>
                         <SelectItem value="SUB_186">186</SelectItem>
                         <SelectItem value="SUB_189">189</SelectItem>
                         <SelectItem value="SUB_190">190</SelectItem>
                         <SelectItem value="SUB_600">600</SelectItem>
-                        <SelectItem value="SUB_820">820</SelectItem>
-                        <SelectItem value="SUB_801">801</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -312,39 +304,14 @@ export default function CustomerForm({ initialData }: CustomerFormProps) {
                 control={form.control}
                 name="visaExpiry"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col self-end">
                     <FormLabel>Visa Expiry Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value ?? undefined}
-                          onSelect={(date) => field.onChange(date ?? null)}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <CustomCalendar
+                        date={field.value ?? new Date()}
+                        setDate={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

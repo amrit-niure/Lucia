@@ -1,44 +1,46 @@
 "use server";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { getCustomerByEmail } from "../customers/actions";
 import { Customer, VisaApplication } from "@prisma/client";
 import { VisaApplicationInput } from "@/types/schema";
+import { checkAuth } from "@/lib/checkAuth";
 export async function createVisaApplication(data: VisaApplicationInput) {
   try {
-    console.log(data);
-
-    // Find the customer by email
-    const customer = await getCustomerByEmail(data.email);
-
-    if (!customer || !customer.data) {
-      return {
-        success: false,
-        error: `Customer with email ${data.email} not found`,
-      };
-    }
-    /* eslint-disable @typescript-eslint/no-unused-vars */
+    await checkAuth();
     const {
       firstName,
       middleName,
       lastName,
       email,
       address,
+      phone,
       passportNumber,
-
-      ...applicationData
+      visaExpiry,
+      currentVisa,
+      ...visaData
     } = data;
-    // Create the visa application and connect it to the existing customer
-    const application = await prisma.visaApplication.create({
+    // create customer record
+    const customer = await prisma.customer.create({
       data: {
-        ...applicationData,
-        customer: {
-          connect: {
-            id: customer.data.id,
-          },
-        },
+        firstName,
+        middleName,
+        lastName,
+        email,
+        address,
+        phone,
+        passportNumber,
+        visaExpiry,
+        currentVisa,
       },
     });
+    // create application record
+    const application = await prisma.visaApplication.create({
+      data: {
+        ...visaData,
+        customerId: customer.id,
+      },
+    });
+
     revalidatePath("/visa-applications");
     return { success: true, data: application };
   } catch (error) {
@@ -51,24 +53,42 @@ export async function updateVisaApplication(
   id: string,
   data: Partial<VisaApplicationInput & { customer: Customer }>,
 ) {
+  await checkAuth();
+
   const {
     firstName,
     middleName,
     lastName,
     email,
     address,
-    customer,
+    phone,
+    visaExpiry,
     passportNumber,
-
+    currentVisa,
     ...applicationData
   } = data;
-  /* eslint-enable @typescript-eslint/no-unused-vars */
+
   try {
     const updatedApplication = await prisma.visaApplication.update({
       where: { id },
-      data: applicationData,
+      data: {
+        ...applicationData,
+        customer: {
+          update: {
+            firstName,
+            middleName,
+            lastName,
+            email,
+            address,
+            phone,
+            passportNumber,
+            visaExpiry,
+            currentVisa,
+          },
+        },
+      },
     });
-    revalidatePath("/visa-applications");
+    revalidatePath("/job-ready-program");
 
     return { success: true, data: updatedApplication };
   } catch (error) {
@@ -108,5 +128,17 @@ export async function getAllVisaApplication(): Promise<
   } catch (error) {
     console.error("Error fetching visa applications:", error);
     throw new Error("Failed to fetch visa applications");
+  }
+}
+export async function deleteVisaApplication(id: string) {
+  try {
+    await prisma.visaApplication.delete({
+      where: { id },
+    });
+    revalidatePath("/visa-applications");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting visa application:", error);
+    return { success: false, error: "Failed to delete visa application" };
   }
 }

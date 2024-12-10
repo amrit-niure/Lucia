@@ -23,13 +23,18 @@ export function UserNav() {
             <AvatarImage src="/avatars/01.png" alt="@shadcn" />
             <AvatarFallback>SC</AvatarFallback>
           </Avatar>
-          <span className="font-bold">Amrit Niure</span>
+          <span className="font-bold">
+            {" "}
+            {user?.email.split("@")[0].toUpperCase()}
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Amrit Niure</p>
+            <p className="text-sm font-medium leading-none">
+              {user?.email.split("@")[0].toUpperCase()}
+            </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user?.email}
             </p>

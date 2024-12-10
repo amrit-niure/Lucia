@@ -2,9 +2,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,12 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Form,
   FormControl,
@@ -48,6 +40,7 @@ import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Customer, SkillsAssessment } from "@prisma/client";
+import { CustomCalendar } from "@/app/components/custom-calender";
 
 interface SkillsAssessmentProps {
   initialData?: SkillsAssessment & { customer: Customer };
@@ -60,35 +53,56 @@ export default function SkillsAssessmentForm({
   const [isEditing] = useState(!!initialData);
   const queryClient = useQueryClient();
 
-  let defaultValue;
-  if (initialData) {
-    defaultValue = {
-      ...initialData,
-      firstName: initialData?.customer?.firstName,
-      middleName: initialData?.customer?.middleName,
-      lastName: initialData?.customer?.lastName,
-      email: initialData?.customer?.email,
-    };
-  }
-
   const form = useForm<SkillsAssessmentInput>({
     resolver: zodResolver(SkillsAssessmentInputSchema),
-    defaultValues: defaultValue || {
-      firstName: "",
-      middleName: "",
-      lastName: "",
-      email: "",
-      occupation: "",
-      assessingAuthority: "",
-      applicationDate: "",
-      stage: "STAGE_1",
-      rpl: "",
-      outcomeDate: undefined,
-      outcomeResult: "PENDING",
-      remarks: "",
-    },
+    defaultValues: initialData
+      ? {
+          firstName: initialData.customer.firstName,
+          middleName: initialData.customer.middleName,
+          lastName: initialData.customer.lastName,
+          email: initialData.customer.email,
+          address: initialData.customer.address,
+          phone: initialData.customer.phone,
+          currentVisa: initialData.customer.currentVisa,
+          visaExpiry: initialData.customer.visaExpiry
+            ? new Date(initialData.customer.visaExpiry)
+            : null,
+          passportNumber: initialData.customer.passportNumber,
+          applicationDate: initialData.applicationDate
+            ? new Date(initialData.applicationDate)
+            : undefined,
+          assessingAuthority: initialData.assessingAuthority,
+          stage: initialData.stage,
+          outcomeDate: initialData.outcomeDate
+            ? new Date(initialData.outcomeDate)
+            : undefined,
+          occupation: initialData.occupation,
+          outcomeResult: initialData.outcomeResult ?? "PENDING",
+          totalAmount: initialData.totalAmount,
+          totalPaid: initialData.totalPaid,
+          rpl: initialData.rpl,
+        }
+      : {
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          email: "",
+          address: "",
+          phone: "",
+          currentVisa: null,
+          passportNumber: "",
+          totalAmount: 0,
+          totalPaid: 0,
+          occupation: "",
+          assessingAuthority: "",
+          applicationDate: new Date(),
+          stage: "STAGE_1",
+          outcomeResult: "PENDING",
+          outcomeDate: undefined,
+          rpl: "",
+          visaExpiry: undefined,
+        },
   });
-
   const createMutation = useMutation({
     mutationFn: createSkillsAssessment,
     onSuccess: ({ success, error }) => {
@@ -124,7 +138,7 @@ export default function SkillsAssessmentForm({
       data: Partial<SkillsAssessmentInput>;
     }) => updateSkillsAssessment(params.id, params.data),
     onSuccess: ({ success, error }) => {
-      queryClient.invalidateQueries({ queryKey: ["visaApplications"] });
+      queryClient.invalidateQueries({ queryKey: ["skills-assessment"] });
       if (success) {
         toast({
           title: "Success",
@@ -152,8 +166,6 @@ export default function SkillsAssessmentForm({
   });
 
   const handleFormSubmit = (data: SkillsAssessmentInput) => {
-    console.log("Form Submitted", data);
-    form.reset();
     if (isEditing && initialData?.id) {
       updateMutation.mutate({ id: initialData.id, data });
     } else {
@@ -170,12 +182,14 @@ export default function SkillsAssessmentForm({
           </Button>
         </Link>
         <CardTitle>
-          {isEditing ? "Edit JRP Application" : "Create JRP Application"}
+          {isEditing
+            ? "Edit Skills Assessment Application"
+            : "Create Skills Assessment Application"}
         </CardTitle>
         <CardDescription>
           {isEditing
             ? "Update the details of the JRP application."
-            : "Fill in the details to create a new JRP application."}
+            : "Fill in the details to create a new Skills Assessment application."}
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -238,10 +252,10 @@ export default function SkillsAssessmentForm({
               />
               <FormField
                 control={form.control}
-                name="occupation"
+                name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Occupation</FormLabel>
+                    <FormLabel>Address</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -249,6 +263,86 @@ export default function SkillsAssessmentForm({
                   </FormItem>
                 )}
               />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="passportNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Passport Number</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="currentVisa"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Visa</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value ?? undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select current Visa" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="SUB_500">500</SelectItem>
+                        <SelectItem value="SUB_482">482</SelectItem>
+                        <SelectItem value="SUB_485">485</SelectItem>
+                        <SelectItem value="SUB_407">407</SelectItem>
+                        <SelectItem value="SUB_186">186</SelectItem>
+                        <SelectItem value="SUB_189">189</SelectItem>
+                        <SelectItem value="SUB_190">190</SelectItem>
+                        <SelectItem value="SUB_600">600</SelectItem>
+                        <SelectItem value="SUB_820">820</SelectItem>
+                        <SelectItem value="SUB_801">801</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="visaExpiry"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col self-end">
+                    <FormLabel>Current Visa Expiry</FormLabel>
+                    <FormControl>
+                      <CustomCalendar
+                        date={field.value ?? new Date()}
+                        setDate={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="assessingAuthority"
@@ -291,6 +385,37 @@ export default function SkillsAssessmentForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
+                name="occupation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Occupation</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="applicationDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col self-end">
+                    <FormLabel>Applied Date</FormLabel>
+                    <FormControl>
+                      <CustomCalendar
+                        date={field.value ?? undefined}
+                        setDate={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
                 name="rpl"
                 render={({ field }) => (
                   <FormItem>
@@ -304,88 +429,22 @@ export default function SkillsAssessmentForm({
               />
               <FormField
                 control={form.control}
-                name="applicationDate"
+                name="outcomeDate"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Application Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                  <FormItem className="flex flex-col self-end">
+                    <FormLabel>Outcome Date</FormLabel>
+                    <FormControl>
+                      <CustomCalendar
+                        date={field.value ?? undefined}
+                        setDate={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="outcomeDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Outcome Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="outcomeResult"

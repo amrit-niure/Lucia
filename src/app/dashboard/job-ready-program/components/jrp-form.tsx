@@ -2,9 +2,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,12 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 import {
   Form,
   FormControl,
@@ -48,6 +41,7 @@ import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Customer, JobReadyProgram } from "@prisma/client";
+import { CustomCalendar } from "@/app/components/custom-calender";
 
 interface JRPProps {
   initialData?: JobReadyProgram & { customer: Customer };
@@ -58,36 +52,62 @@ export default function JRPFrom({ initialData }: JRPProps) {
   const [isEditing] = useState(!!initialData);
   const queryClient = useQueryClient();
 
-  let defaultValue;
-  if (initialData) {
-    defaultValue = {
-      ...initialData,
-      firstName: initialData?.customer?.firstName,
-      middleName: initialData?.customer?.middleName,
-      lastName: initialData?.customer?.lastName,
-      email: initialData?.customer?.email,
-    };
-  }
-
   const form = useForm<JobReadyProgramInput>({
     resolver: zodResolver(JobReadyProgramInputSchema),
-    defaultValues: defaultValue || {
-      firstName: "",
-      middleName: "",
-      lastName: "",
-      email: "",
-      programType: "",
-      startDate: undefined,
-      endDate: "",
-      stage: "JRPRE",
-      workplacement: "",
-      employerName: "",
-      employerABN: "",
-      supervisorName: "",
-      supervisorContact: "",
-      completionDate: undefined,
-      outcomeResult: "PENDING",
-    },
+    defaultValues: initialData
+      ? {
+          ...initialData,
+          firstName: initialData.customer.firstName ?? "",
+          middleName: initialData.customer.middleName ?? "",
+          lastName: initialData.customer.lastName ?? "",
+          email: initialData.customer.email ?? "",
+          address: initialData.customer.address ?? "",
+          passportNumber: initialData.customer.passportNumber ?? "",
+          currentVisa: initialData.customer.currentVisa ?? undefined,
+          visaExpiry: initialData.customer.visaExpiry ?? undefined,
+          phone: initialData.customer.phone ?? "",
+          workplacement: initialData.workplacement ?? undefined,
+          employerName: initialData.employerName ?? undefined,
+          employerABN: initialData.employerABN ?? undefined,
+          supervisorName: initialData.supervisorName ?? undefined,
+          supervisorContact: initialData.supervisorContact ?? undefined,
+          startDate: initialData.startDate ?? undefined,
+          completionDate: initialData.completionDate ?? undefined,
+          jrpUserId: initialData.jrpUserId ?? undefined,
+          jrpPassword: initialData.jrpPassword ?? undefined,
+          question1: initialData.question1 ?? undefined,
+          question2: initialData.question2 ?? undefined,
+          question3: initialData.question3 ?? undefined,
+          totalAmount: initialData.totalAmount,
+          totalPaid: initialData.totalPaid,
+        }
+      : {
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          email: "",
+          address: "",
+          passportNumber: "",
+          currentVisa: undefined,
+          visaExpiry: undefined,
+          phone: "",
+          startDate: undefined,
+          stage: "JRE",
+          workplacement: undefined,
+          employerName: undefined,
+          employerABN: undefined,
+          supervisorName: undefined,
+          supervisorContact: undefined,
+          completionDate: undefined,
+          outcomeResult: "PENDING",
+          jrpUserId: undefined,
+          jrpPassword: undefined,
+          question1: undefined,
+          question2: undefined,
+          question3: undefined,
+          totalAmount: 0,
+          totalPaid: 0,
+        },
   });
 
   const createMutation = useMutation({
@@ -97,7 +117,7 @@ export default function JRPFrom({ initialData }: JRPProps) {
       if (success) {
         toast({
           title: "Success",
-          description: "Visa application successfully recorded.",
+          description: "JRP application successfully recorded.",
         });
       } else if (!success) {
         toast({
@@ -150,8 +170,6 @@ export default function JRPFrom({ initialData }: JRPProps) {
   });
 
   const handleFormSubmit = (data: JobReadyProgramInput) => {
-    console.log("Form Submitted", data);
-    form.reset();
     if (isEditing && initialData?.id) {
       updateMutation.mutate({ id: initialData.id, data });
     } else {
@@ -236,10 +254,10 @@ export default function JRPFrom({ initialData }: JRPProps) {
               />
               <FormField
                 control={form.control}
-                name="programType"
+                name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Program</FormLabel>
+                    <FormLabel>Address</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -251,88 +269,95 @@ export default function JRPFrom({ initialData }: JRPProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="startDate"
+                name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Start Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="completionDate"
+                name="passportNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Completion Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormLabel>Passport Number</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="currentVisa"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Visa</FormLabel>
+                    <Select onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select applied Visa" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="SUB_500">500</SelectItem>
+                        <SelectItem value="SUB_482">482</SelectItem>
+                        <SelectItem value="SUB_485">485</SelectItem>
+                        <SelectItem value="SUB_407">407</SelectItem>
+                        <SelectItem value="SUB_186">186</SelectItem>
+                        <SelectItem value="SUB_189">189</SelectItem>
+                        <SelectItem value="SUB_190">190</SelectItem>
+                        <SelectItem value="SUB_600">600</SelectItem>
+                        <SelectItem value="SUB_820">820</SelectItem>
+                        <SelectItem value="SUB_801">801</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="startDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col self-end">
+                    <FormLabel>JRP Start Date</FormLabel>
+                    <FormControl>
+                      <CustomCalendar
+                        date={field.value ?? new Date()}
+                        setDate={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="completionDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col self-end">
+                    <FormLabel>End Date</FormLabel>
+                    <FormControl>
+                      <CustomCalendar
+                        date={field.value ?? new Date()}
+                        setDate={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="stage"
@@ -349,7 +374,7 @@ export default function JRPFrom({ initialData }: JRPProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="JRPRE">JRPRE</SelectItem>
+                        <SelectItem value="PSA">PSA</SelectItem>
                         <SelectItem value="JRE">JRE</SelectItem>
                         <SelectItem value="JRWA">JRWA</SelectItem>
                         <SelectItem value="JRFA">JRFA</SelectItem>
@@ -359,6 +384,9 @@ export default function JRPFrom({ initialData }: JRPProps) {
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="workplacement"
@@ -372,21 +400,20 @@ export default function JRPFrom({ initialData }: JRPProps) {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="employerABN"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Employer ABN</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-            <FormField
-              control={form.control}
-              name="employerABN"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Employer ABN</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -414,6 +441,8 @@ export default function JRPFrom({ initialData }: JRPProps) {
                   </FormItem>
                 )}
               />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="supervisorContact"
@@ -455,6 +484,120 @@ export default function JRPFrom({ initialData }: JRPProps) {
                 )}
               />
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="totalPaid"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total Paid</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={field.value?.toString() || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === "" ? "" : Number(value));
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="totalAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total Amount</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        value={field.value?.toString() || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === "" ? "" : Number(value));
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="jrpUserId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>JRP User Id</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="jrpPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Credentials</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="question1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Question and Answer 1</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="question2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Question and Answer 2</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="question3"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Question and Answer 3</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full py-2">

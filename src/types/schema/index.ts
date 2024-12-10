@@ -13,6 +13,7 @@ const CustomerBaseSchema = z.object({
     .enum([
       "SUB_500",
       "SUB_482",
+      "SUB_485",
       "SUB_407",
       "SUB_186",
       "SUB_189",
@@ -44,15 +45,30 @@ const VisaApplicationBaseSchema = z.object({
   lastName: z.string().min(1, { message: "Last name is required" }),
   email: z.string().email({ message: "Invalid email address" }),
   address: z.string().min(1, { message: "Address is required" }),
-  passportNumber: z
-    .string()
-    .min(1, { message: "Passport number is required" })
-    .nullable(),
+  passportNumber: z.string().nullable().optional(),
+  currentVisa: z
+    .enum([
+      "SUB_500",
+      "SUB_482",
+      "SUB_485",
+      "SUB_407",
+      "SUB_186",
+      "SUB_189",
+      "SUB_190",
+      "SUB_600",
+      "SUB_820",
+      "SUB_801",
+    ])
+    .nullable()
+    .optional(),
+  visaExpiry: z.date().nullable().optional(),
+  phone: z.string().min(1, { message: "Phone number is required" }),
   visaAppliedDate: z.date(),
   visaStatus: z.enum(["PENDING", "APPROVED", "REJECTED"]),
   visaType: z.enum([
     "SUB_500",
     "SUB_482",
+    "SUB_485",
     "SUB_407",
     "SUB_186",
     "SUB_189",
@@ -67,7 +83,6 @@ const VisaApplicationBaseSchema = z.object({
   totalPaid: z
     .number()
     .nonnegative({ message: "Total paid must be non-negative" }),
-  overseer: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -86,9 +101,27 @@ const JobReadyProgramBaseSchema = z.object({
   middleName: z.string().nullable().optional(),
   lastName: z.string().min(1, { message: "Last name is required" }),
   email: z.string().email({ message: "Invalid email address" }),
-  programType: z.string().min(1, { message: "Program type is required" }),
+  address: z.string().min(1, { message: "Address is required" }),
+  passportNumber: z.string().nullable().optional(),
+  currentVisa: z
+    .enum([
+      "SUB_500",
+      "SUB_482",
+      "SUB_485",
+      "SUB_407",
+      "SUB_186",
+      "SUB_189",
+      "SUB_190",
+      "SUB_600",
+      "SUB_820",
+      "SUB_801",
+    ])
+    .nullable()
+    .optional(),
+  visaExpiry: z.date().nullable().optional(),
+  phone: z.string().min(1, { message: "Phone number is required" }),
   startDate: z.date(),
-  stage: z.enum(["JRPRE", "JRFA", "JRWA", "JRE"]),
+  stage: z.enum(["PSA", "JRFA", "JRWA", "JRE"]),
   workplacement: z.string().optional(),
   employerName: z.string().optional(),
   employerABN: z.string().optional(),
@@ -96,6 +129,17 @@ const JobReadyProgramBaseSchema = z.object({
   supervisorContact: z.string().optional(),
   completionDate: z.date().optional(),
   outcomeResult: z.enum(["SUCCESSFUL", "UNSUCCESSFUL", "PENDING"]),
+  jrpUserId: z.string().optional(),
+  jrpPassword: z.string().optional(),
+  question1: z.string().optional(),
+  question2: z.string().optional(),
+  question3: z.string().optional(),
+  totalAmount: z
+    .number()
+    .nonnegative({ message: "Total amount must be non-negative" }),
+  totalPaid: z
+    .number()
+    .nonnegative({ message: "Total paid must be non-negative" }),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -114,6 +158,25 @@ const SkillsAssessmentBaseSchema = z.object({
   middleName: z.string().nullable().optional(),
   lastName: z.string().min(1, { message: "Last name is required" }),
   email: z.string().email({ message: "Invalid email address" }),
+  address: z.string().min(1, { message: "Address is required" }),
+  passportNumber: z.string().nullable().optional(),
+  currentVisa: z
+    .enum([
+      "SUB_500",
+      "SUB_482",
+      "SUB_485",
+      "SUB_407",
+      "SUB_186",
+      "SUB_189",
+      "SUB_190",
+      "SUB_600",
+      "SUB_820",
+      "SUB_801",
+    ])
+    .nullable()
+    .optional(),
+  visaExpiry: z.date().nullable().optional(),
+  phone: z.string().min(1, { message: "Phone number is required" }),
   occupation: z.string().min(1, { message: "Occupation is required" }),
   assessingAuthority: z
     .string()
@@ -122,10 +185,13 @@ const SkillsAssessmentBaseSchema = z.object({
   stage: z.enum(["STAGE_1", "STAGE_2", "INTERVIEW"]),
   outcomeDate: z.date().optional(),
   outcomeResult: z.enum(["SUCCESSFUL", "UNSUCCESSFUL", "PENDING"]),
-  remarks: z
-    .string()
-    .max(250, { message: "Maximum character limit exceeded." }),
   rpl: z.string().max(250, { message: "Maximum character limit exceeded." }),
+  totalAmount: z
+    .number()
+    .nonnegative({ message: "Total amount must be non-negative" }),
+  totalPaid: z
+    .number()
+    .nonnegative({ message: "Total paid must be non-negative" }),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

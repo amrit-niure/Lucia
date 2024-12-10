@@ -1,7 +1,6 @@
 "use server";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { getCustomerByEmail } from "../customers/actions";
 import { Customer, JobReadyProgram } from "@prisma/client";
 import { JobReadyProgramInput } from "@/types/schema";
 import { checkAuth } from "@/lib/checkAuth";
@@ -9,29 +8,40 @@ import { checkAuth } from "@/lib/checkAuth";
 export async function createJrpApplication(data: JobReadyProgramInput) {
   try {
     await checkAuth();
-
-    // Find the customer by email
-    const customer = await getCustomerByEmail(data.email);
-
-    if (!customer || !customer.data) {
-      return {
-        success: false,
-        error: `Customer with email ${data.email} not found`,
-      };
-    }
-    /* eslint-disable @typescript-eslint/no-unused-vars */
-    const { firstName, middleName, lastName, email, ...applicationData } = data;
-    // Create the visa application and connect it to the existing customer
-    const application = await prisma.jobReadyProgram.create({
+    const {
+      firstName,
+      middleName,
+      lastName,
+      email,
+      address,
+      phone,
+      passportNumber,
+      visaExpiry,
+      currentVisa,
+      ...jrpData
+    } = data;
+    // create customer record
+    const customer = await prisma.customer.create({
       data: {
-        ...applicationData,
-        customer: {
-          connect: {
-            id: customer.data.id,
-          },
-        },
+        firstName,
+        middleName,
+        lastName,
+        email,
+        address,
+        phone,
+        passportNumber,
+        visaExpiry,
+        currentVisa,
       },
     });
+    // create application record
+    const application = await prisma.jobReadyProgram.create({
+      data: {
+        ...jrpData,
+        customerId: customer.id,
+      },
+    });
+
     revalidatePath("/job-ready-program");
     return { success: true, data: application };
   } catch (error) {
@@ -51,14 +61,33 @@ export async function updateJrpApplication(
     middleName,
     lastName,
     email,
-    customer,
-    ...applicationData
+    address,
+    phone,
+    passportNumber,
+    visaExpiry,
+    currentVisa,
+    ...jrpData
   } = data;
-  /* eslint-enable @typescript-eslint/no-unused-vars */
+
   try {
     const updatedApplication = await prisma.jobReadyProgram.update({
       where: { id },
-      data: applicationData,
+      data: {
+        ...jrpData,
+        customer: {
+          update: {
+            firstName,
+            middleName,
+            lastName,
+            email,
+            address,
+            phone,
+            passportNumber,
+            visaExpiry,
+            currentVisa,
+          },
+        },
+      },
     });
     revalidatePath("/job-ready-program");
 
@@ -104,5 +133,21 @@ export async function getAllJrpApplication(): Promise<
   } catch (error) {
     console.error("Error fetching JRP applications:", error);
     throw new Error("Failed to fetch JRP applications");
+  }
+}
+
+export async function deleteJrpApplication(id: string) {
+  await checkAuth();
+  try {
+    await prisma.jobReadyProgram.delete({
+      where: {
+        id,
+      },
+    });
+    revalidatePath("/job-ready-program");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting JRP application:", error);
+    return { success: false, error: "Failed to delete JRP application" };
   }
 }
